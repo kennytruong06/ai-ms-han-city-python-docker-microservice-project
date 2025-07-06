@@ -1,0 +1,6 @@
+services:
+  app:
+    image: fanglee2003/nsfw-detection-docker
+    ports:
+      - "8000:8006" # Map 1 cổng 8000 ở môi trường gốc vào cổng 8000 ở trong container
+    restart: unless-stopped
