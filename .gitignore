@@ -1,6 +1,8 @@
 *__pycache__*
-uploaded/*
+storage/downloaded/*
 test/*
 tempCodeRunnerFile.py
 myenv/*
 models/vit-violence
+
+.idea/
