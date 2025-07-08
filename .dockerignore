@@ -1,0 +1,13 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+.Python
+
+.cache
+*.log
+.git
+.gitignore
+
+storage/downloaded

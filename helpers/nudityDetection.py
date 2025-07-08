@@ -1,4 +1,3 @@
-import os
 from models.nudenet import NudeClassifier
 
 print('----------Initializing the NudeClassifier----------')

@@ -1,7 +1,6 @@
 from PIL import Image
 import numpy as np
 from tensorflow.keras.applications.mobilenet import preprocess_input
-import os
 
 img_sze = (224, 224)
 

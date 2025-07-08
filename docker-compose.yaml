@@ -1,6 +1,20 @@
 services:
-  app:
-    image: fanglee2003/nsfw-detection-docker
+  nsfw-ai-microservice:
+    container_name: nsfw-ai-microservice
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
-      - "8000:8006" # Map 1 cổng 8000 ở môi trường gốc vào cổng 8000 ở trong container
+      - "8000:8000"
+    networks:
+      - han.city.network
     restart: unless-stopped
+    environment:
+      - ENV=dev
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - .:/app
+
+networks:
+  han.city.network:
+    external: true

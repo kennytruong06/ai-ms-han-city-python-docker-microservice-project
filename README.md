@@ -1,9 +1,11 @@
 # Hancity AI Microservice (AI MS)
 
-## 📌 Giới thiệu
+## 📌 Introduction
 
-Đây là mã nguồn microservice AI của Hancity, cung cấp API kiểm duyệt nội dung tự động cho hệ thống đăng bài. Dịch vụ này sử dụng các mô hình AI để phát hiện nội dung nhạy cảm (NSFW), bạo lực trong ảnh/video và kiểm tra từ ngữ phản cảm trong văn bản. API được thiết kế để tích hợp trực tiếp vào hệ thống backend, không có giao diện người dùng (UI), chỉ cung cấp các endpoint RESTful cho các dịch vụ khác gọi tới.
-
+This is the AI microservice developed by Hancity, designed to provide automated content moderation APIs 
+for post submission systems. It uses AI models to detect sensitive content (NSFW), violence in images and videos, 
+and offensive language in text. The service is designed to run without a user interface (UI) 
+and is fully accessible via RESTful API endpoints, making it easy to integrate into any backend system.
 
 ## 🚀 Features
 
@@ -16,28 +18,26 @@
 
 ## 🛠 Installation (How to run by docker)
 
-### Create the folder 
-
-```sh
-uploaded
-```
-uploaded
-
 ### Build image
 
 ```sh
-docker build -t ai-microservice .
+DOCKER_BUILDKIT=1 docker-compose build
+```
+
+### Create docker network
+
+```sh
+docker network create han.city.network
 ```
 
 ### Run Image
 ```sh
-docker run -d -p 8000:8000 --name ai-microservice ai-microservice
+DOCKER_BUILDKIT=1 docker-compose up -d
 ```
-
 
 ## 📡 API Usage
 
-### Endpoint: `/preds`
+### Endpoint: `/api/moderation/check`
 
 **Method:** `POST`
 
@@ -45,84 +45,97 @@ docker run -d -p 8000:8000 --name ai-microservice ai-microservice
 
 **Form Fields:**
 
-- `text_field_1`: Any text input to check for offensive words.
-- `text_field_2`: Additional text inputs are also processed.
-- `files`: Images or videos to analyze for NSFW content.
+JSON Fields:
+
+- `content`: A list of text strings to be checked for offensive words.
+- `pictures`: A list of image URLs (or local paths) to be analyzed for NSFW or violent content.
+- `videos`: A list of video URLs (or local paths) to be analyzed for NSFW or violent content.
 
 **Example Request (Using cURL):**
 
 ```sh
-curl -X POST "http://127.0.0.1:5000/preds" \
-  -F "name=hello" \
-  -F "comment=Buổi sáng thật cặc" \
-  -F "files=@image.jpg" \
-  -F "files=@video.mp4"
+curl --location 'http://localhost:8000/api/moderation/check' \
+--header 'Content-Type: application/json' \
+--data '{
+    "content": [
+        "Tôi là 1 người tốt lồn", "Hôm nay trời thật cặc", "Con đĩ mẹ mày nữa"
+    ],
+    "pictures": [
+        "https://hoseiki.vn/wp-content/uploads/2025/03/meo-cute-14.jpg?v=1741737378"
+    ],
+    "videos": [
+        "https://down-bs-sg.vod.susercontent.com/api/v4/11110103/mms/vn-11110103-6khw9-m37nrf6m9d646f.16000051732959709.mp4"
+    ]
+}'
 ```
 
 ### 🔹 Response Format
 
 ```json
 {
-  "data": [
-    {
-      "field": "name",
-      "offensive_words": [
-        "ngu"
-      ]
-    },
-    {
-      "field": "description",
-      "offensive_words": [
-        "cặc"
-      ]
-    },
-    {
-      "field": "profile_picture",
-      "filename": "hqdefault.jpg",
-      "predictions": {
-        "path": "./uploaded\\hqdefault.jpg",
-        "isContainNude": false,
-        "isContainViolence": false,
-        "predicts": {
-          "nude_score": 0,
-          "violence_score": 50
+    "data": [
+        {
+            "field": "content",
+            "offensive_words": [
+                "lồn",
+                "cặc",
+                "đĩ"
+            ]
+        },
+        {
+            "field": "pictures",
+            "results": [
+                {
+                    "source": "https://hoseiki.vn/wp-content/uploads/2025/03/meo-cute-14.jpg?v=1741737378",
+                    "predictions": {
+                        "path": "/app/storage/downloaded/1780c835.jpg",
+                        "isContainNude": false,
+                        "isContainViolence": true,
+                        "predicts": {
+                            "nude_score": 0.0,
+                            "violence_score": 66.0
+                        }
+                    },
+                    "error": null
+                }
+            ]
+        },
+        {
+            "field": "videos",
+            "results": [
+                {
+                    "source": "https://down-bs-sg.vod.susercontent.com/api/v4/11110103/mms/vn-11110103-6khw9-m37nrf6m9d646f.16000051732959709.mp4",
+                    "predictions": {
+                        "path": "/app/storage/downloaded/42308006.mp4",
+                        "type": "This video contains NSFW content",
+                        "timestamps": {
+                            "0:00:03.600000": "Nude"
+                        }
+                    },
+                    "error": null
+                }
+            ]
         }
-      }
-    },
-    {
-      "field": "presentation_video",
-      "filename": "fighting.mp4",
-      "predictions": {
-        "path": "./uploaded\\fighting.mp4",
-        "type": "This video contains NSFW content",
-        "timestamps": {
-          "0:00:10": "Violence",
-          "0:00:15": "Violence",
-          "0:00:22": "Violence",
-          "0:00:23": "Violence",
-          "0:00:25": "Violence"
-        }
-      }
-    }
-  ]
+    ]
 }
 ```
 
-## 🎯 Task & Hướng dẫn tối ưu khi triển khai lên server
+## 🎯 Task & Optimization Guide for Deployment
 
 ### Task:
-- Chuyển đổi toàn bộ sang API, loại bỏ UI.
-- Tối ưu API để tăng tốc độ xử lý.
-- Sử dụng đa luồng (threading) để xử lý song song các request.
-- Tách riêng logic kiểm tra text, image, video để tối ưu hiệu năng.
 
-### Khi triển khai lên server, cần thực hiện:
-1. **Cài đặt Python, Docker, driver GPU (nếu có)** đầy đủ.
-2. **Cài đặt Docker & NVIDIA Container Toolkit** nếu sử dụng GPU.
-3. **Build lại Docker image sau mỗi lần cập nhật mã nguồn.**
-4. **Chạy container với tham số phù hợp:**  
-   - Nếu dùng GPU: `docker run --gpus all ...`
-   - Nếu chỉ dùng CPU: `docker run ...`
+- Convert the entire project to API-only, remove UI ✅
+- Optimize API for better processing speed ✅
+- Use multithreading to handle concurrent requests ✅
+- Separate logic for text, image, and video moderation to improve performance ✅
+
+### Deployment Checklist:
+1. **Install Python, Docker, and GPU drivers (if applicable).**
+2. **Install Docker & NVIDIA Container Toolkit if using GPU acceleration.**
+3. **Rebuild the Docker image every time you update the source code.**
+4. **Run the container with appropriate options:**
+   - If using GPU:docker run --gpus all ...
+   - If using CPU only: docker run ...
 
 ## 📜 License
 

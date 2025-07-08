@@ -1,8 +1,10 @@
 import datetime
 import cv2
 import os
+import uuid
 from helpers.nudityDetection import nude_detection
 from helpers.violenceDetection import violence_detection
+from config.config import TEMP_DIR
 
 
 def nsfw_check(img_path):
@@ -40,48 +42,56 @@ def nsfw_check(img_path):
 
 def nsfw_check_video(video_path, frame_skip=30):
     """
+    Phát hiện NSFW trong video (nude hoặc bạo lực) và dừng khi gặp nội dung đầu tiên.
+
     PARAMS::
     - video_path: Đường dẫn tới video cần kiểm tra.
-    - frame_skip: Số frame bỏ qua để giảm tải tính toán (mặc định mỗi 30 frames mới kiểm tra 1 frame).
+    - frame_skip: Số frame bỏ qua (ví dụ: mỗi 30 frame kiểm tra 1 frame).
 
-    Returns::
-    - result: Danh sách thời gian (giây) phát hiện nội dung NSFW hoặc "Video này an toàn".
+    RETURNS::
+    - dict: {
+        path: str,
+        type: str,
+        timestamps: Optional[dict] nếu phát hiện NSFW
+    }
     """
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
-        return "Không thể mở video."
+        return {
+            "path": video_path,
+            "type": "Cannot open video."
+        }
 
-    fps = int(cap.get(cv2.CAP_PROP_FPS))  # Số khung hình mỗi giây
-    nsfw_times = {}  # Danh sách lưu thời gian phát hiện NSFW
-
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
     frame_count = 0
+
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
             break
 
-        # Chỉ xử lý mỗi 'frame_skip' frame để tiết kiệm thời gian
         if frame_count % frame_skip == 0:
-            temp_path = "temp_frame.jpg"
-            cv2.imwrite(temp_path, frame)  # Lưu frame tạm thời
-            nsfw_result = nsfw_check(temp_path)  # Gọi hàm phát hiện NSFW
+            temp_path = os.path.join(TEMP_DIR, f"{uuid.uuid4().hex[:8]}.jpg")
+            cv2.imwrite(temp_path, frame)
+
+            nsfw_result = nsfw_check(temp_path)
+            os.remove(temp_path)  # Xoá frame tạm ngay
 
             if nsfw_result["isContainNude"] or nsfw_result["isContainViolence"]:
-                formatted_time = str(datetime.timedelta(seconds=frame_count/fps))
-                nsfw_times[formatted_time] = "Nude" if nsfw_result["isContainNude"] else "Violence"
+                formatted_time = str(datetime.timedelta(seconds=frame_count / fps))
+                cap.release()
+                return {
+                    "path": video_path,
+                    "type": "This video contains NSFW content",
+                    "timestamps": {
+                        formatted_time: "Nude" if nsfw_result["isContainNude"] else "Violence"
+                    }
+                }
 
         frame_count += 1
 
     cap.release()
-    # os.remove(temp_path)  # Xóa frame tạm sau khi xử lý
-
-    if nsfw_times:
-        return {
-            "path": video_path,
-            "type": "This video contains NSFW content",
-            "timestamps": nsfw_times
-        }
     return {
         "path": video_path,
-        "type": "This video is safe!",
+        "type": "This video is safe!"
     }

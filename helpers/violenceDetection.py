@@ -1,12 +1,7 @@
-import datetime
-import cv2
-from helpers.preprocessImgs import prepare_img
-from tensorflow import keras
-import tensorflow as tf
 import os
 import torch
 import numpy as np
-from transformers import ViTForImageClassification, ViTFeatureExtractor
+from transformers import ViTForImageClassification, ViTImageProcessor
 from PIL import Image
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -19,7 +14,7 @@ labels = ["Non-Violence", "Violence"]
 print("--------Loading the model---------")
 
 model = ViTForImageClassification.from_pretrained(model_path)
-feature_extractor = ViTFeatureExtractor.from_pretrained(model_path)
+feature_extractor = ViTImageProcessor.from_pretrained(model_path)
 
 
 def violence_detection(img_path):
